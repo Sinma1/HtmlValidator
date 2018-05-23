@@ -64,31 +64,9 @@ namespace HtmlValidator
 
             foreach (var tag in _tags)
             {
-                if (!AreAttributesCorrect(tag))
+                if (!IsTagCorrect(tag, tagStack))
                 {
                     return false;
-                }
-
-                if (tag.Type == TagType.Opening)
-                {
-                    tagStack.Push(tag);
-                }
-                else if (tag.Type == TagType.Closing)
-                {
-                    if (tagStack.Count == 0)
-                    {
-                        ErrorMessage = "Closing tags that where never opened\n" +
-                                       $"tag {tag.Name} at position ({tag.Line}, {tag.Line}).";
-                        return false;
-                    }
-
-                    var expectedTag = tagStack.Pop();
-                    if (expectedTag.Name != tag.Name)
-                    {
-                        ErrorMessage = $"Closing wrong tag, expected </{expectedTag.Name}>\n" +
-                                       $"instead of {tag.Name} at position ({tag.Line}, {tag.Line}).";
-                        return false;
-                    }
                 }
             }
 
@@ -101,6 +79,38 @@ namespace HtmlValidator
             return false;
         }
 
+        private bool IsTagCorrect(Tag tag, Stack<Tag> tagStack)
+        {
+            if (!AreAttributesCorrect(tag))
+            {
+                return false;
+            }
+
+            if (tag.Type == TagType.Opening)
+            {
+                tagStack.Push(tag);
+            }
+            else if (tag.Type == TagType.Closing)
+            {
+                if (tagStack.Count == 0)
+                {
+                    ErrorMessage = "Closing tags that where never opened\n" +
+                                   $"tag {tag.Name} at position ({tag.Line}, {tag.Line}).";
+                    return false;
+                }
+
+                var expectedTag = tagStack.Pop();
+                if (expectedTag.Name != tag.Name)
+                {
+                    ErrorMessage = $"Closing wrong tag, expected </{expectedTag.Name}>\n" +
+                                   $"instead of {tag.Name} at position ({tag.Line}, {tag.Line}).";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private List<Tag> FindTags(string html)
         {
             var foundTags = new List<Tag>();
@@ -109,61 +119,72 @@ namespace HtmlValidator
 
             foreach (var token in tokens)
             {
-                var tag = new Tag()
-                {
-                    Line = token.Line,
-                    Column = token.Column
-                };
+                var tag = CreateTag(token);
 
-                var value = token.Value;
-
-                switch (token.Type)
-                {
-                    case "closingtag":
-                        tag.Type = TagType.Closing;
-                        value = value.Substring(2, value.Length - 3);
-                        break;
-                    case "selfclosingtag":
-                        tag.Type = TagType.SelfClosing;
-                        value = value.Substring(1, value.Length - 3);
-                        break;
-                    case "openingtag":
-                        tag.Type = TagType.Opening;
-                        value = value.Substring(1, value.Length - 2);
-                        break;
-                    case "word":
-                        continue;
-                    default:
-                        ErrorMessage = $"Unknown token: {token.Type}\n" +
-                                       $"at position ({token.Line}, {token.Line}).";
-                        continue;
-                }
-
-                var splitedTagParts = value.Trim().Split(' ').ToList();
-
-                if (splitedTagParts.Count < 1)
-                {
-                    ErrorMessage = "Tag name has not been found\n" +
-                                   $"at position ({tag.Line}, {tag.Line}).";
-                    continue;
-                }
-
-                tag.Name = splitedTagParts[0];
-                splitedTagParts.RemoveAt(0);
-
-                if (tag.Type == TagType.Closing && splitedTagParts.Count > 0)
-                {
-                    ErrorMessage = "Closing tags can't have attributes\n" +
-                                   $"Tag {tag.Name} at position ({token.Line}, {token.Line}).";
+                if (ErrorOccurred)
                     break;
-                }
 
-                splitedTagParts.ForEach(tag.AttributesList.Add);
-
-                foundTags.Add(tag);
+                if (tag != null)
+                    foundTags.Add(tag);
             }
 
             return foundTags;
+        }
+
+        private Tag CreateTag(Token token)
+        {
+            var tag = new Tag()
+            {
+                Line = token.Line,
+                Column = token.Column
+            };
+
+            var tokenValue = token.Value;
+
+            switch (token.Type)
+                {
+                    case "closingtag":
+                        tag.Type = TagType.Closing;
+                        tokenValue = tokenValue.Substring(2, tokenValue.Length - 3);
+                        break;
+                    case "selfclosingtag":
+                        tag.Type = TagType.SelfClosing;
+                        tokenValue = tokenValue.Substring(1, tokenValue.Length - 3);
+                        break;
+                    case "openingtag":
+                        tag.Type = TagType.Opening;
+                        tokenValue = tokenValue.Substring(1, tokenValue.Length - 2);
+                        break;
+                    case "word":
+                        return null;
+                    default:
+                        ErrorMessage = $"Unknown token: {token.Type}\n" +
+                                       $"at position ({token.Line}, {token.Line}).";
+                        return null;
+                }
+
+            var splitedTagParts = tokenValue.Trim().Split(' ').ToList();
+
+            if (splitedTagParts.Count < 1)
+            {
+                ErrorMessage = "Tag name has not been found\n" +
+                               $"at position ({tag.Line}, {tag.Line}).";
+                return null;
+            }
+
+            tag.Name = splitedTagParts[0];
+            splitedTagParts.RemoveAt(0);
+
+            if (tag.Type == TagType.Closing && splitedTagParts.Count > 0)
+            {
+                ErrorMessage = "Closing tags can't have attributes\n" +
+                               $"Tag {tag.Name} at position ({token.Line}, {token.Line}).";
+                return null;
+            }
+
+            splitedTagParts.ForEach(tag.AttributesList.Add);
+
+            return tag;
         }
 
         private bool AreAttributesCorrect(Tag tag)
