@@ -43,28 +43,28 @@ namespace HtmlValidator.Lexer
 
                 html = match.TextLeft;
 
-                if (match.IsMatch)
+                if (!match.IsMatch) 
+                    continue;
+
+                match.Token.Line = line;
+                match.Token.Column = column;
+
+                if (match.Token.Type == "newline")
                 {
-                    match.Token.Line = line;
-                    match.Token.Column = column;
-
-                    if (match.Token.Type == "newline")
-                    {
-                        match.Token.Value = "";
-                        line++;
-                        column = 1;
-                        continue;
-                    }
-
-                    column += match.Token.Value.Length;
-
-                    if (match.Token.Type == "space")
-                    {
-                        continue;
-                    }
-
-                    tokens.Add(match.Token);
+                    match.Token.Value = "";
+                    line++;
+                    column = 1;
+                    continue;
                 }
+
+                column += match.Token.Value.Length;
+
+                if (match.Token.Type == "space")
+                {
+                    continue;
+                }
+
+                tokens.Add(match.Token);
             }
 
             return tokens;

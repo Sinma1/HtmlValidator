@@ -7,10 +7,27 @@ namespace Example
     {
         static void Main(string[] args)
         {
-            var htmlPage =
-                "<html>\r\n<head>\r\n<title k>\r\nA Simple HTML Document\r\n</title>\r\n</head>\r\n<body>\r\n<p>This is a very simple HTML document</p>\r\n<p>It only has two paragraphs</p>\r\nSend me mail at <a href=\"mailto:support@yourcompany.com\">here</a>\r\n<br />\r\n</body>\r\n</html>";
+            var htmlPage = 
+@"<html>
+<head>
+<title>
+A Simple HTML Document
+</title>
+</head>
+<body>
+<p>This is a very simple HTML document</p>
+<p>It only has two paragraphs</p>
+Send me mail at <a href=""mailto:support@yourcompany.com"">here</a>
+<br />
+</body>
+</html>";
 
-            var validator = new HtmlValidator.HtmlValidator(htmlPage);
+            var validator = new HtmlValidator.HtmlValidator();
+            validator.Parse(htmlPage);
+
+            Console.WriteLine("Printing all tokens found on page.");
+            validator.PrintTokens(htmlPage);
+            Console.WriteLine();
 
             if (validator.IsValid())
             {
@@ -20,8 +37,6 @@ namespace Example
             {
                 Console.WriteLine("ERROR: " + validator.ErrorMessage);
             }
-
-            validator.PrintTokens(htmlPage);
 
             Console.ReadKey();
         }

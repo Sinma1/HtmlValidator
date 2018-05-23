@@ -15,7 +15,7 @@ namespace HtmlValidator
 
         private readonly Lexer.Lexer _lexer;
 
-        public HtmlValidator(string html)
+        public HtmlValidator()
         {
             _lexer = new Lexer.Lexer(
                 new TokenDefinition("NewLine", @"(\n|\r\n?)"),
@@ -25,7 +25,16 @@ namespace HtmlValidator
                 new TokenDefinition("OpeningTag", @"<[^<>/]+>"),
                 new TokenDefinition("Word", @"[^<>\s]+")
             ) {MatchEverything = true};
+        }
 
+        public HtmlValidator(string html) : this()
+        {
+            Parse(html);
+        }
+
+        public void Parse(string html)
+        {
+            ErrorMessage = "";
             _tags = FindTags(html);
         }
 
@@ -83,14 +92,13 @@ namespace HtmlValidator
                 }
             }
 
-            if (tagStack.Count != 0)
-            {
-                ErrorMessage = $"Tag {tagStack.Peek().Name} has not been closed\n" +
-                               $"at position ({tagStack.Peek().Line}, {tagStack.Peek().Line}).";
-                return false;
-            }
+            if (tagStack.Count == 0) 
+                return true;
 
-            return true;
+
+            ErrorMessage = $"Tag {tagStack.Peek().Name} has not been closed\n" +
+                           $"at position ({tagStack.Peek().Line}, {tagStack.Peek().Line}).";
+            return false;
         }
 
         private List<Tag> FindTags(string html)
